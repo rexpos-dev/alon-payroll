@@ -1,0 +1,147 @@
+<%- include('partials/header') %>
+<div class="welcome">
+  <div>
+    <h1>Welcome back, <%= user.full_name %></h1>
+    <p><%= companyName %> · Payroll overview</p>
+  </div>
+  <% if (can('payroll')) { %><a class="btn primary" href="/periods">New payroll run</a><% } %>
+</div>
+
+<div class="tiles">
+  <div class="tile stat">
+    <div class="tile-icon"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14.3c2 .7 3.5 2.4 3.5 5.7"/></svg></div>
+    <div><div class="tile-label">Active employees</div><div class="tile-value" data-count="<%= emp.active %>"><%= emp.active %></div></div>
+  </div>
+  <div class="tile stat">
+    <div class="tile-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+    <div><div class="tile-label">Pending approval</div><div class="tile-value" data-count="<%= pending.c %>"><%= pending.c %></div></div>
+  </div>
+  <div class="tile stat">
+    <div class="tile-icon"><svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="13" rx="2.5"/><path d="M3 10h18M7 15h3"/></svg></div>
+    <div><div class="tile-label">Active loans</div><div class="tile-value" data-count="<%= loans.c %>"><%= loans.c %></div><div class="tile-sub">Balance ₱<%= money(loans.bal) %></div></div>
+  </div>
+  <div class="tile stat">
+    <div class="tile-icon"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-9"/><path d="M15 7h5v5"/></svg></div>
+    <div>
+      <div class="tile-label">Gross (last period)</div>
+      <div class="tile-value">₱<span data-count="<%= grossTotal %>" data-money="1"><%= money(grossTotal) %></span></div>
+      <% if (prevGross > 0) { const ch = (grossTotal - prevGross) / prevGross * 100; %>
+        <div class="tile-sub <%= ch >= 0 ? 'up' : 'down' %>"><%= ch >= 0 ? '▲' : '▼' %> <%= Math.abs(ch).toFixed(1) %>% vs. previous period</div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div class="chart-grid">
+  <div class="card chart-card wide-chart">
+    <div class="card-title"><h2>Gross vs Net pay</h2><span class="muted">Last <%= charts.trend.length %> period(s)</span></div>
+    <div class="chart-box"><canvas id="trendChart"></canvas></div>
+    <% if (!charts.trend.length) { %><div class="chart-empty">No payroll data yet. The chart appears after the first period is computed.</div><% } %>
+  </div>
+  <div class="card chart-card">
+    <div class="card-title"><h2>Employees by department</h2></div>
+    <div class="chart-box"><canvas id="deptChart"></canvas></div>
+    <% if (!charts.dept.length) { %><div class="chart-empty">No active employees yet.</div><% } %>
+  </div>
+  <div class="card chart-card">
+    <div class="card-title"><h2>Deductions</h2><span class="muted"><%= charts.deductions ? charts.deductions.period : '' %></span></div>
+    <div class="chart-box"><canvas id="dedChart"></canvas></div>
+    <% if (!charts.deductions) { %><div class="chart-empty">No deductions to display yet.</div><% } %>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Recent payroll periods</h2>
+  <% if (!periods.length) { %>
+    <p class="muted">No payroll periods yet. Start by importing employees from Excel, then create a period.</p>
+    <ol class="steps">
+      <li><a href="/employees/import">Import employees from the old Excel file</a></li>
+      <li><a href="/settings/rates">Check the government rates</a></li>
+      <li><a href="/holidays">Enter the holidays</a></li>
+      <li><a href="/periods">Create a payroll period</a></li>
+    </ol>
+  <% } else { %>
+  <table class="grid">
+    <thead><tr><th>Cut-off</th><th>Pay date</th><th>Status</th><th class="num">Payslips</th><th class="num">Total net pay</th></tr></thead>
+    <tbody>
+    <% for (const p of periods) { %>
+      <tr>
+        <td><a href="/periods/<%= p.id %>"><%= fmtDate(p.date_from) %> – <%= fmtDate(p.date_to) %></a></td>
+        <td><%= fmtDate(p.pay_date) %></td>
+        <td><span class="pill <%= p.status %>"><%= p.status %></span></td>
+        <td class="num"><%= p.slips %></td>
+        <td class="num">₱<%= money(p.net) %></td>
+      </tr>
+    <% } %>
+    </tbody>
+  </table>
+  <% } %>
+</div>
+
+<script src="/vendor/chart.js"></script>
+<script>
+(function () {
+  const C = <%- JSON.stringify(charts) %>;
+  const navy = '#1b2c64', cyan = '#29a9d8';
+  const palette = ['#1b2c64', '#29a9d8', '#5b7be0', '#7fd0ee', '#3a4f9a', '#a8c4f0', '#17806a', '#f2b84b'];
+  const peso = v => '₱' + Number(v).toLocaleString('en-PH', { maximumFractionDigits: 0 });
+
+  // Count-up animation for stat cards
+  document.querySelectorAll('[data-count]').forEach(el => {
+    const end = Number(el.dataset.count), money = el.dataset.money, t0 = performance.now(), dur = 1100;
+    if (!end) return;
+    (function tick(now) {
+      const p = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - p, 3), v = end * e;
+      el.textContent = money ? v.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(v);
+      if (p < 1) requestAnimationFrame(tick);
+    })(t0);
+  });
+
+  if (!window.Chart) return;
+  Chart.defaults.font.family = 'Poppins, "Segoe UI", system-ui, sans-serif';
+  Chart.defaults.color = '#6b7a95';
+  Chart.defaults.animation = { duration: 1200, easing: 'easeOutQuart' };
+  const tip = { backgroundColor: '#14214f', padding: 10, cornerRadius: 8, titleFont: { weight: '600' } };
+
+  if (C.trend.length) {
+    const ctx = document.getElementById('trendChart').getContext('2d');
+    const g = ctx.createLinearGradient(0, 0, 0, 280);
+    g.addColorStop(0, 'rgba(41,169,216,.45)'); g.addColorStop(1, 'rgba(41,169,216,0)');
+    new Chart(ctx, {
+      data: {
+        labels: C.trend.map(t => t.label),
+        datasets: [
+          { type: 'bar', label: 'Gross', data: C.trend.map(t => t.gross), backgroundColor: navy, borderRadius: 8, maxBarThickness: 34 },
+          { type: 'line', label: 'Net', data: C.trend.map(t => t.net), borderColor: cyan, backgroundColor: g, fill: true, tension: .4, borderWidth: 3, pointRadius: 4, pointBackgroundColor: '#fff', pointBorderColor: cyan, pointBorderWidth: 2 },
+        ],
+      },
+      options: {
+        maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: { ...tip, callbacks: { label: c => ` ${c.dataset.label}: ${peso(c.parsed.y)}` } } },
+        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, border: { display: false }, grid: { color: '#e8f0f7' }, ticks: { callback: peso } } },
+      },
+    });
+  }
+
+  if (C.dept.length) {
+    new Chart(document.getElementById('deptChart'), {
+      type: 'doughnut',
+      data: { labels: C.dept.map(d => d.name), datasets: [{ data: C.dept.map(d => d.c), backgroundColor: palette, borderWidth: 3, borderColor: '#fff', hoverOffset: 8 }] },
+      options: { maintainAspectRatio: false, cutout: '66%', animation: { animateRotate: true, animateScale: true, duration: 1400 },
+        plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8 } }, tooltip: tip } },
+    });
+  }
+
+  if (C.deductions) {
+    const items = C.deductions.items.filter(i => i.v > 0);
+    new Chart(document.getElementById('dedChart'), {
+      type: 'bar',
+      data: { labels: items.map(i => i.name), datasets: [{ data: items.map(i => i.v), backgroundColor: palette, borderRadius: 8, maxBarThickness: 22 }] },
+      options: { indexAxis: 'y', maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { ...tip, callbacks: { label: c => ' ' + peso(c.parsed.x) } } },
+        scales: { x: { border: { display: false }, grid: { color: '#e8f0f7' }, ticks: { callback: peso } }, y: { grid: { display: false } } } },
+    });
+  }
+})();
+</script>
+<%- include('partials/footer') %>

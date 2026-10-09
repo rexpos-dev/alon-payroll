@@ -1,0 +1,28 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <h1>Holidays <%= year %></h1>
+  <div class="actions"><a class="btn" href="/holidays?year=<%= year - 1 %>">‹ <%= year - 1 %></a><a class="btn" href="/holidays?year=<%= year + 1 %>"><%= year + 1 %> ›</a></div>
+</div>
+<% if (can('hr')) { %>
+<form method="post" action="/holidays" class="filters card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input type="date" name="holiday_date" required>
+  <select name="type"><option value="regular">Regular holiday</option><option value="special">Special non-working</option></select>
+  <input name="name" placeholder="Holiday name" required>
+  <button class="btn primary">Add</button>
+</form>
+<% } %>
+<div class="card flush">
+<table class="grid">
+  <thead><tr><th>Date</th><th>Type</th><th>Name</th><th></th></tr></thead>
+  <tbody>
+  <% for (const h of rows) { %>
+    <tr><td><%= fmtDate(h.holiday_date) %></td><td><span class="pill <%= h.type === 'regular' ? 'approved' : 'computed' %>"><%= h.type === 'regular' ? 'Regular' : 'Special' %></span></td><td><%= h.name %></td>
+    <td class="right"><% if (can('hr')) { %><form method="post" action="/holidays/<%= h.id %>/delete" data-confirm="Delete this holiday?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="linkbtn danger">Delete</button></form><% } %></td></tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="4" class="muted center">No holidays entered for <%= year %>.</td></tr><% } %>
+  </tbody>
+</table>
+</div>
+<p class="muted">Enter the holidays every year according to the Malacañang proclamation.</p>
+<%- include('../partials/footer') %>

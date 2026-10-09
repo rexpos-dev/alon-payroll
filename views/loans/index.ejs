@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <h1>Loans</h1>
+  <form class="filters" method="get">
+    <select name="status" onchange="this.form.submit()">
+      <% for (const s of ['active','paid','cancelled','all']) { %><option value="<%= s %>" <%= status === s ? 'selected' : '' %>><%= s === 'all' ? 'All' : s %></option><% } %>
+    </select>
+  </form>
+</div>
+<% if (can('hr','payroll')) { %>
+<form method="post" action="/loans" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>New loan</h2>
+  <div class="form-grid compact">
+    <label>Employee<select name="employee_id" required><option value=""></option><% for (const e of employees) { %><option value="<%= e.id %>"><%= e.last_name %>, <%= e.first_name %></option><% } %></select></label>
+    <label>Type<select name="loan_type"><option>SSS</option><option>Pag-IBIG</option><option>Company</option></select></label>
+    <label>Reference / Voucher No<input name="reference_no"></label>
+    <label>Principal<input type="number" step="0.01" min="0" name="principal" required></label>
+    <label>Amortization per cut-off<input type="number" step="0.01" min="0" name="amortization" required></label>
+    <label>First deduction (pay date)<input type="date" name="start_date" required></label>
+    <label>Balance (blank = principal)<input type="number" step="0.01" min="0" name="balance"></label>
+    <label>Notes<input name="notes"></label>
+  </div>
+  <div class="form-actions"><button class="btn primary">Save loan</button></div>
+</form>
+<% } %>
+<div class="card flush">
+<table class="grid">
+  <thead><tr><th>Employee</th><th>Type</th><th>Reference</th><th>Start</th><th class="num">Principal</th><th class="num">Amortization</th><th class="num">Paid</th><th class="num">Balance</th><th>Status</th></tr></thead>
+  <tbody>
+  <% for (const l of rows) { %>
+    <tr>
+      <td><a href="/loans/<%= l.id %>"><%= l.last_name %>, <%= l.first_name %></a></td>
+      <td><%= l.loan_type %></td><td><%= l.reference_no || '' %></td><td><%= fmtDate(l.start_date) %></td>
+      <td class="num"><%= money(l.principal) %></td><td class="num"><%= money(l.amortization) %></td>
+      <td class="num"><%= money(l.paid) %></td><td class="num"><strong><%= money(l.balance) %></strong></td>
+      <td><span class="pill <%= l.status === 'active' ? 'computed' : (l.status === 'paid' ? 'posted' : 'draft') %>"><%= l.status %></span></td>
+    </tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="9" class="muted center">No loans.</td></tr><% } %>
+  </tbody>
+</table>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,122 @@
+<%- include('../partials/header') %>
+<% const v = k => (e[k] === null || e[k] === undefined ? '' : e[k]); const sel = (k, val) => String(v(k)) === String(val) ? 'selected' : ''; const chk = k => Number(e[k]) ? 'checked' : ''; const ro = can('hr') ? '' : 'disabled'; %>
+<div class="page-head">
+  <h1><%= isNew ? 'New Employee' : `${e.last_name}, ${e.first_name}` %></h1>
+  <a class="btn" href="/employees">Back to list</a>
+</div>
+<% if (errors.length) { %><div class="flash error"><% for (const x of errors) { %><div><%= x %></div><% } %></div><% } %>
+
+<form method="post" action="<%= isNew ? '/employees' : `/employees/${e.id}` %>" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>201 File</h2>
+  <div class="form-grid">
+    <label>Employee No *<input name="emp_no" value="<%= v('emp_no') %>" required <%= ro %>></label>
+    <label>Status<select name="status" <%= ro %>><% for (const s of ['Active','Inactive','Resigned']) { %><option <%= sel('status', s) %>><%= s %></option><% } %></select></label>
+    <label>Last Name *<input name="last_name" value="<%= v('last_name') %>" required <%= ro %>></label>
+    <label>First Name *<input name="first_name" value="<%= v('first_name') %>" required <%= ro %>></label>
+    <label>Middle Name<input name="middle_name" value="<%= v('middle_name') %>" <%= ro %>></label>
+    <label>Department<select name="department_id" <%= ro %>><option value="">—</option><% for (const d of departments) { %><option value="<%= d.id %>" <%= sel('department_id', d.id) %>><%= d.name %></option><% } %></select></label>
+    <label>Position<select name="position_id" <%= ro %>><option value="">—</option><% for (const p of positions) { %><option value="<%= p.id %>" <%= sel('position_id', p.id) %>><%= p.name %></option><% } %></select></label>
+    <label>Date Hired<input type="date" name="date_hired" value="<%= v('date_hired') %>" <%= ro %>></label>
+    <label>Birth Date<input type="date" name="birth_date" value="<%= v('birth_date') %>" <%= ro %>></label>
+    <label>Civil Status<input name="civil_status" value="<%= v('civil_status') %>" <%= ro %>></label>
+    <label>Contact<input name="contact" value="<%= v('contact') %>" <%= ro %>></label>
+    <label class="wide">Address<input name="address" value="<%= v('address') %>" <%= ro %>></label>
+  </div>
+
+  <h2>Salary</h2>
+  <div class="form-grid">
+    <label>Pay Type<select name="pay_type" <%= ro %>>
+      <option value="semi" <%= sel('pay_type','semi') %>>Semi-monthly (monthly basic / 2)</option>
+      <option value="daily" <%= sel('pay_type','daily') %>>Daily (paid per day worked)</option>
+    </select></label>
+    <label>Monthly Basic<input type="number" step="0.01" min="0" name="monthly_basic" value="<%= v('monthly_basic') %>" <%= ro %>></label>
+    <label>Daily Rate (for Daily)<input type="number" step="0.01" min="0" name="daily_rate" value="<%= v('daily_rate') %>" <%= ro %>></label>
+    <label>Workdays per Cut-off<input type="number" step="0.5" min="1" name="days_per_cutoff" value="<%= v('days_per_cutoff') %>" <%= ro %>><small>Semi: daily rate = (monthly / 2) / this</small></label>
+    <label>Tax Class<select name="tax_class" <%= ro %>>
+      <option value="above_min" <%= sel('tax_class','above_min') %>>Above minimum wage</option>
+      <option value="mwe" <%= sel('tax_class','mwe') %>>Minimum wage earner (no tax)</option>
+    </select></label>
+  </div>
+  <div class="checks">
+    <label><input type="checkbox" name="track_dtr" value="1" <%= chk('track_dtr') %> <%= ro %>> Use DTR (late, absent, OT)</label>
+    <label><input type="checkbox" name="sss_enabled" value="1" <%= chk('sss_enabled') %> <%= ro %>> SSS</label>
+    <label><input type="checkbox" name="philhealth_enabled" value="1" <%= chk('philhealth_enabled') %> <%= ro %>> PhilHealth</label>
+    <label><input type="checkbox" name="pagibig_enabled" value="1" <%= chk('pagibig_enabled') %> <%= ro %>> Pag-IBIG</label>
+  </div>
+
+  <h2>Government IDs</h2>
+  <div class="form-grid">
+    <label>TIN<input name="tin" value="<%= v('tin') %>" <%= ro %>></label>
+    <label>SSS No<input name="sss_no" value="<%= v('sss_no') %>" <%= ro %>></label>
+    <label>PhilHealth No<input name="philhealth_no" value="<%= v('philhealth_no') %>" <%= ro %>></label>
+    <label>Pag-IBIG No<input name="pagibig_no" value="<%= v('pagibig_no') %>" <%= ro %>></label>
+  </div>
+  <% if (can('hr')) { %><div class="form-actions"><button class="btn primary">Save employee</button></div><% } %>
+</form>
+
+<% if (!isNew) { %>
+<form method="post" action="/employees/<%= e.id %>/pay-items" class="card" id="payitems">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>Allowances and deductions per cut-off</h2>
+  <p class="muted">Fixed allowance and deduction: amount added/deducted every cut-off. Variable: rate per unit (enter the quantity under Adjustments for each period). Enter 0 to remove.</p>
+  <% for (const [kind, label] of [['fixed','Fixed Allowance'],['variable','Variable Allowance (rate)'],['deduction','Deductions']]) { %>
+    <h3><%= label %></h3>
+    <div class="form-grid compact">
+      <% for (const it of items.filter(i => i.kind === kind)) { %>
+        <label><%= it.name %><% if (it.taxable) { %> <span class="tag">taxable</span><% } %>
+          <input type="number" step="0.01" min="0" name="item_<%= it.id %>" value="<%= it.amount ? it.amount : '' %>" placeholder="0.00" <%= can('hr','payroll') ? '' : 'disabled' %>></label>
+      <% } %>
+    </div>
+  <% } %>
+  <% if (can('hr','payroll')) { %><div class="form-actions"><button class="btn primary">Save allowances/deductions</button></div><% } %>
+</form>
+
+<div class="two-col">
+<form method="post" action="/employees/<%= e.id %>/schedule" class="card" id="schedule">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>Schedule</h2>
+  <div class="form-grid compact">
+    <label>AM In<input type="time" name="am_in" value="<%= String(sched.am_in).slice(0,5) %>" <%= ro %>></label>
+    <label>AM Out<input type="time" name="am_out" value="<%= String(sched.am_out).slice(0,5) %>" <%= ro %>></label>
+    <label>PM In<input type="time" name="pm_in" value="<%= String(sched.pm_in).slice(0,5) %>" <%= ro %>></label>
+    <label>PM Out<input type="time" name="pm_out" value="<%= String(sched.pm_out).slice(0,5) %>" <%= ro %>></label>
+  </div>
+  <div class="checks"><span class="muted">Rest days:</span>
+    <% const rd = String(sched.rest_days || '').split(','); for (const d of ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']) { %>
+      <label><input type="checkbox" name="rest_days" value="<%= d %>" <%= rd.includes(d) ? 'checked' : '' %> <%= ro %>> <%= d %></label>
+    <% } %>
+  </div>
+  <% if (can('hr')) { %><div class="form-actions"><button class="btn">Save schedule</button></div><% } %>
+</form>
+
+<form method="post" action="/employees/<%= e.id %>/leave-credits" class="card" id="leaves">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input type="hidden" name="year" value="<%= year %>">
+  <h2>Leave credits <%= year %></h2>
+  <table class="grid small">
+    <thead><tr><th></th><th class="num">Credits</th><th class="num">Used</th><th class="num">Remaining</th></tr></thead>
+    <tbody>
+      <tr><td>VL</td><td class="num"><input class="mini" type="number" step="0.5" min="0" name="vl_days" value="<%= credits.vl_days %>" <%= ro %>></td><td class="num"><%= used.vl %></td><td class="num"><%= Number(credits.vl_days) - Number(used.vl) %></td></tr>
+      <tr><td>SL</td><td class="num"><input class="mini" type="number" step="0.5" min="0" name="sl_days" value="<%= credits.sl_days %>" <%= ro %>></td><td class="num"><%= used.sl %></td><td class="num"><%= Number(credits.sl_days) - Number(used.sl) %></td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Leave usage is recorded in the DTR (choose VL or SL for the day).</p>
+  <% if (can('hr')) { %><div class="form-actions"><button class="btn">Save credits</button></div><% } %>
+</form>
+</div>
+
+<div class="card">
+  <h2>Loans</h2>
+  <% if (!loans.length) { %><p class="muted">No loans. <a href="/loans">Add one on the Loans page.</a></p><% } else { %>
+  <table class="grid small">
+    <thead><tr><th>Type</th><th>Reference</th><th>Start</th><th class="num">Amortization</th><th class="num">Balance</th><th>Status</th></tr></thead>
+    <tbody><% for (const l of loans) { %>
+      <tr><td><a href="/loans/<%= l.id %>"><%= l.loan_type %></a></td><td><%= l.reference_no || '' %></td><td><%= fmtDate(l.start_date) %></td>
+      <td class="num"><%= money(l.amortization) %></td><td class="num"><%= money(l.balance) %></td><td><%= l.status %></td></tr>
+    <% } %></tbody>
+  </table>
+  <% } %>
+</div>
+<% } %>
+<%- include('../partials/footer') %>

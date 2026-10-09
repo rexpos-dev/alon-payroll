@@ -1,0 +1,41 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <div><h1>Payroll Register</h1><div class="muted"><%= company.name %> · <%= fmtDate(period.date_from) %> – <%= fmtDate(period.date_to) %> · Pay date <%= fmtDate(period.pay_date) %></div></div>
+  <div class="actions">
+    <a class="btn" href="/periods/<%= period.id %>">Back</a>
+    <a class="btn" href="/periods/<%= period.id %>/register.csv?department_id=<%= departmentId %>">Export CSV (Excel)</a>
+    <button class="btn" onclick="window.print()">Print</button>
+  </div>
+</div>
+<form class="filters no-print" method="get">
+  <select name="department_id" onchange="this.form.submit()">
+    <option value="">All departments</option>
+    <% for (const d of departments) { %><option value="<%= d.id %>" <%= String(d.id) === String(departmentId) ? 'selected' : '' %>><%= d.name %></option><% } %>
+  </select>
+</form>
+<div class="card flush">
+<div class="scroll-x">
+<table class="grid register">
+  <thead><tr><th>Emp No</th><th>Name</th><th>Department</th><% for (const [, label] of COLS) { %><th class="num"><%= label %></th><% } %></tr></thead>
+  <tbody>
+  <% for (const r of rows) { %>
+    <tr><td><%= r.emp_no %></td><td><%= r.last_name %>, <%= r.first_name %></td><td><%= r.department || '' %></td>
+    <% for (const [k] of COLS) { %><td class="num"><%= money(r[k]) %></td><% } %></tr>
+  <% } %>
+  </tbody>
+  <tfoot><tr><td colspan="3">TOTAL (<%= rows.length %>)</td><% for (const [k] of COLS) { %><td class="num"><%= money(totals[k]) %></td><% } %></tr></tfoot>
+</table>
+</div>
+</div>
+<div class="card narrow">
+  <h2>Contributions remittance (this cut-off)</h2>
+  <table class="grid small">
+    <thead><tr><th></th><th class="num">Employee</th><th class="num">Employer</th><th class="num">EC</th><th class="num">Total</th></tr></thead>
+    <tbody>
+      <tr><td>SSS</td><td class="num"><%= money(contrib.sss_ee) %></td><td class="num"><%= money(contrib.sss_er) %></td><td class="num"><%= money(contrib.sss_ec) %></td><td class="num"><%= money(contrib.sss_ee + contrib.sss_er + contrib.sss_ec) %></td></tr>
+      <tr><td>PhilHealth</td><td class="num"><%= money(contrib.philhealth_ee) %></td><td class="num"><%= money(contrib.philhealth_er) %></td><td></td><td class="num"><%= money(contrib.philhealth_ee + contrib.philhealth_er) %></td></tr>
+      <tr><td>Pag-IBIG</td><td class="num"><%= money(contrib.pagibig_ee) %></td><td class="num"><%= money(contrib.pagibig_er) %></td><td></td><td class="num"><%= money(contrib.pagibig_ee + contrib.pagibig_er) %></td></tr>
+    </tbody>
+  </table>
+</div>
+<%- include('../partials/footer') %>

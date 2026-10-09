@@ -1,0 +1,82 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Government Rates</h1></div>
+<div class="flash warn">Verify these rates against the latest SSS, PhilHealth, Pag-IBIG and BIR circulars. Add new rates with an effective date; older payroll keeps the old rates.</div>
+
+<div class="two-col">
+<div class="card">
+  <h2>PhilHealth</h2>
+  <table class="grid small">
+    <thead><tr><th>Effective</th><th class="num">Rate</th><th class="num">Floor</th><th class="num">Ceiling</th></tr></thead>
+    <tbody><% for (const r of philhealth) { %><tr><td><%= fmtDate(r.effective_date) %></td><td class="num"><%= (r.rate * 100).toFixed(2) %>%</td><td class="num"><%= money(r.floor_salary) %></td><td class="num"><%= money(r.ceiling_salary) %></td></tr><% } %></tbody>
+  </table>
+  <form method="post" action="/settings/rates/philhealth" class="form-grid compact">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Effective<input type="date" name="effective_date" required></label>
+    <label>Rate (0.05 = 5%)<input type="number" step="0.0001" name="rate" required></label>
+    <label>Floor<input type="number" step="0.01" name="floor_salary" required></label>
+    <label>Ceiling<input type="number" step="0.01" name="ceiling_salary" required></label>
+    <button class="btn">Add</button>
+  </form>
+  <p class="muted small">The employee share is half of the total premium.</p>
+</div>
+
+<div class="card">
+  <h2>Pag-IBIG</h2>
+  <table class="grid small">
+    <thead><tr><th>Effective</th><th class="num">EE ≤ low</th><th class="num">EE</th><th class="num">ER</th><th class="num">Max salary</th></tr></thead>
+    <tbody><% for (const r of pagibig) { %><tr><td><%= fmtDate(r.effective_date) %></td><td class="num"><%= (r.ee_rate_low * 100).toFixed(1) %>% (≤<%= money(r.low_threshold) %>)</td><td class="num"><%= (r.ee_rate * 100).toFixed(1) %>%</td><td class="num"><%= (r.er_rate * 100).toFixed(1) %>%</td><td class="num"><%= money(r.max_fund_salary) %></td></tr><% } %></tbody>
+  </table>
+  <form method="post" action="/settings/rates/pagibig" class="form-grid compact">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <label>Effective<input type="date" name="effective_date" required></label>
+    <label>Low threshold<input type="number" step="0.01" name="low_threshold" value="1500"></label>
+    <label>EE rate (low)<input type="number" step="0.0001" name="ee_rate_low" value="0.01"></label>
+    <label>EE rate<input type="number" step="0.0001" name="ee_rate" value="0.02"></label>
+    <label>ER rate<input type="number" step="0.0001" name="er_rate" value="0.02"></label>
+    <label>Max fund salary<input type="number" step="0.01" name="max_fund_salary" value="10000"></label>
+    <button class="btn">Add</button>
+  </form>
+</div>
+</div>
+
+<div class="card">
+  <div class="page-head">
+    <h2>SSS contribution schedule</h2>
+    <form method="get" class="filters"><select name="sss" onchange="this.form.submit()"><% for (const d of sssDates) { %><option value="<%= d.effective_date %>" <%= d.effective_date === sssDate ? 'selected' : '' %>>Effective <%= fmtDate(d.effective_date) %> (<%= d.n %>)</option><% } %></select></form>
+  </div>
+  <div class="scroll-y">
+  <table class="grid small">
+    <thead><tr><th class="num">Range from</th><th class="num">Range to</th><th class="num">MSC</th><th class="num">EE</th><th class="num">ER</th><th class="num">EC</th></tr></thead>
+    <tbody><% for (const r of sss) { %><tr><td class="num"><%= money(r.range_from) %></td><td class="num"><%= r.range_to === null ? 'and up' : money(r.range_to) %></td><td class="num"><%= money(r.msc) %></td><td class="num"><%= money(r.ee) %></td><td class="num"><%= money(r.er) %></td><td class="num"><%= money(r.ec) %></td></tr><% } %></tbody>
+  </table>
+  </div>
+  <details>
+    <summary>Add or replace the SSS schedule</summary>
+    <form method="post" action="/settings/rates/sss" class="stack">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label>Effective date<input type="date" name="effective_date" required></label>
+      <label>One bracket per line: <code>range_from,range_to,msc,ee,er,ec</code> (leave range_to blank on the last line)
+        <textarea name="rows" rows="8" placeholder="0,5249.99,5000,250,500,10&#10;5250,5749.99,5500,275,550,10"></textarea></label>
+      <button class="btn">Save schedule</button>
+    </form>
+  </details>
+</div>
+
+<div class="card">
+  <h2>Withholding tax table</h2>
+  <table class="grid small">
+    <thead><tr><th>Effective</th><th>Period</th><th class="num">Over</th><th class="num">Fixed tax</th><th class="num">Rate on excess</th></tr></thead>
+    <tbody><% for (const r of tax) { %><tr><td><%= fmtDate(r.effective_date) %></td><td><%= r.period %></td><td class="num"><%= money(r.range_from) %></td><td class="num"><%= money(r.fixed_tax) %></td><td class="num"><%= (r.rate * 100).toFixed(0) %>%</td></tr><% } %></tbody>
+  </table>
+  <details>
+    <summary>Add or replace the tax table</summary>
+    <form method="post" action="/settings/rates/tax" class="stack">
+      <input type="hidden" name="_csrf" value="<%= csrf %>">
+      <label>Effective date<input type="date" name="effective_date" required></label>
+      <label>One bracket per line: <code>period,range_from,fixed_tax,rate</code> (period = semi or monthly)
+        <textarea name="rows" rows="8" placeholder="semi,0,0,0&#10;semi,10417,0,0.15"></textarea></label>
+      <button class="btn">Save tax table</button>
+    </form>
+  </details>
+</div>
+<%- include('../partials/footer') %>

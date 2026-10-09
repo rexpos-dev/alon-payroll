@@ -1,0 +1,21 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Departments and Positions</h1></div>
+<div class="two-col">
+<% for (const [table, label] of Object.entries(LISTS)) { %>
+<div class="card">
+  <h2><%= label %></h2>
+  <form method="post" action="/settings/lists/<%= table %>" class="filters">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input name="name" placeholder="New <%= label.toLowerCase().replace(/s$/, '') %>" required>
+    <button class="btn">Add</button>
+  </form>
+  <table class="grid small">
+    <% for (const r of data[table]) { %>
+      <tr class="<%= r.active ? '' : 'off' %>"><td><%= r.name %></td>
+      <td class="right"><form method="post" action="/settings/lists/<%= table %>/<%= r.id %>/toggle"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="linkbtn"><%= r.active ? 'Deactivate' : 'Activate' %></button></form></td></tr>
+    <% } %>
+  </table>
+</div>
+<% } %>
+</div>
+<%- include('../partials/footer') %>

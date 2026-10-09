@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title><%= title %> · <%= company.name %></title>
+  <link rel="stylesheet" href="/public/css/style.css">
+</head>
+<body class="print-body">
+<div class="print-bar no-print">
+  <button class="btn primary" onclick="window.print()">Print / Save as PDF</button>
+  <span class="muted"><%= slips.length %> payslip(s)</span>
+</div>
+<% const sec = (s, name) => s.lines.filter(l => l.section === name); %>
+<% for (const s of slips) { %>
+<section class="payslip">
+  <header class="ps-head">
+    <div>
+      <div class="ps-co"><%= company.name %></div>
+      <div class="muted small"><%= company.address || '' %> <%= company.contact ? '· ' + company.contact : '' %></div>
+    </div>
+    <div class="ps-title">PAYSLIP<% if (s.period_status !== 'posted') { %> <span class="tag"><%= s.period_status.toUpperCase() %></span><% } %></div>
+  </header>
+  <div class="ps-info">
+    <div><span>Employee</span><strong><%= s.last_name %>, <%= s.first_name %> <%= s.middle_name ? s.middle_name[0] + '.' : '' %></strong></div>
+    <div><span>Emp No</span><%= s.emp_no %></div>
+    <div><span>Department</span><%= s.department || '—' %></div>
+    <div><span>Position</span><%= s.position || '—' %></div>
+    <div><span>Cut-off</span><%= fmtDate(s.date_from) %> – <%= fmtDate(s.date_to) %></div>
+    <div><span>Pay date</span><%= fmtDate(s.pay_date) %></div>
+    <div><span>TIN</span><%= s.tin || '—' %></div>
+    <div><span>SSS / PH / HDMF</span><%= s.sss_no || '—' %> / <%= s.philhealth_no || '—' %> / <%= s.pagibig_no || '—' %></div>
+  </div>
+  <div class="ps-cols">
+    <div>
+      <h4>Earnings</h4>
+      <table class="ps-table">
+        <% for (const l of sec(s, 'earning')) { %>
+          <tr><td><%= l.label %><% if (l.qty !== null && l.unit) { %> <span class="muted">(<%= Number(l.qty) %> <%= l.unit %>)</span><% } %></td><td class="num"><%= money(l.amount) %></td></tr>
+        <% } %>
+        <tr class="sub"><td>Gross pay</td><td class="num"><%= money(s.gross_pay) %></td></tr>
+      </table>
+      <% if (sec(s, 'allowance').length) { %>
+      <h4>Allowances</h4>
+      <table class="ps-table">
+        <% for (const l of sec(s, 'allowance')) { %><tr><td><%= l.label %><% if (Number(l.qty) !== 1 && l.qty !== null) { %> <span class="muted">(<%= Number(l.qty) %> × <%= money(l.rate) %>)</span><% } %><%= l.taxable ? ' *' : '' %></td><td class="num"><%= money(l.amount) %></td></tr><% } %>
+      </table>
+      <% } %>
+    </div>
+    <div>
+      <h4>Deductions</h4>
+      <table class="ps-table">
+        <% for (const l of [...sec(s, 'contribution'), ...sec(s, 'tax'), ...sec(s, 'deduction'), ...sec(s, 'loan')]) { %>
+          <tr><td><%= l.label %></td><td class="num"><%= money(l.amount) %></td></tr>
+        <% } %>
+        <tr class="sub"><td>Total deductions</td><td class="num"><%= money(Number(s.sss_ee) + Number(s.philhealth_ee) + Number(s.pagibig_ee) + Number(s.withholding_tax) + Number(s.other_deductions) + Number(s.loan_deductions)) %></td></tr>
+      </table>
+      <table class="ps-table summary">
+        <tr><td>Taxable income</td><td class="num"><%= money(s.taxable_income) %></td></tr>
+        <tr class="net"><td>NET PAY</td><td class="num">₱<%= money(s.net_pay) %></td></tr>
+      </table>
+    </div>
+  </div>
+  <footer class="ps-foot">
+    <div>Prepared by<br><strong><%= company.prepared_by || '' %></strong></div>
+    <div>Checked by<br><strong><%= company.checked_by || '' %></strong></div>
+    <div>Approved by<br><strong><%= company.approved_by || '' %></strong></div>
+    <div>Received by / Date<br><span class="sig"></span></div>
+  </footer>
+</section>
+<% } %>
+<% if (!slips.length) { %><p class="center muted">No payslips.</p><% } %>
+</body>
+</html>

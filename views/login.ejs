@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign in · Alon Payroll</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/public/css/login.css">
+</head>
+<body class="auth">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- Temporary logo: wave "A" -->
+    <symbol id="logo" viewBox="0 0 48 48">
+      <path d="M24 4 4 44h9.5L24 22.5 34.5 44H44L24 4Z" fill="currentColor"/>
+      <path d="M17 36c3.5-3 7-3 10.5 0s5.5 2.6 7.5 1" stroke="var(--logo-accent, #29a9d8)" stroke-width="3" stroke-linecap="round" fill="none"/>
+    </symbol>
+  </defs>
+</svg>
+
+<main class="auth-wrap">
+  <section class="auth-form">
+    <div class="auth-box">
+      <div class="logo-row">
+        <svg class="logo" viewBox="0 0 48 48"><use href="#logo"/></svg>
+        <span>Alon</span>
+      </div>
+
+      <h1>Sign in</h1>
+
+      <% if (error) { %><div class="auth-error" role="alert"><%= error %></div><% } %>
+
+      <form method="post" action="/login" autocomplete="on">
+        <input type="hidden" name="_csrf" value="<%= csrf %>">
+
+        <label for="username">Username</label>
+        <div class="field">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></svg>
+          <input id="username" name="username" placeholder="Enter your username" autocomplete="username" required autofocus>
+        </div>
+
+        <label for="password">Password</label>
+        <div class="field">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+          <input id="password" type="password" name="password" placeholder="••••••" autocomplete="current-password" required>
+          <button type="button" class="toggle" id="toggle" aria-label="Show password">
+            <svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+
+        <button class="submit">Sign in</button>
+      </form>
+
+      <p class="hint">Forgot your password? Contact your administrator.</p>
+    </div>
+  </section>
+
+  <section class="auth-hero" aria-hidden="true">
+    <div class="orb"></div>
+    <span class="streak s1"></span><span class="streak s2"></span>
+    <svg class="hero-logo" viewBox="0 0 48 48"><use href="#logo"/></svg>
+
+    <div class="hero-copy">
+      <div class="hero-brand"><%= companyName %></div>
+      <h2>Welcome to Alon Payroll</h2>
+      <p>Manage employees, attendance, loans and semi-monthly payroll in one organized, accurate and secure place.</p>
+      <p class="lead">Less paperwork. Faster payday.</p>
+    </div>
+
+    <div class="hero-card">
+      <h3>Payroll that is right the first time</h3>
+      <p>SSS, PhilHealth, Pag-IBIG and tax are computed for you, with every change recorded in the audit log.</p>
+      <div class="dots"><i></i><i></i><i></i></div>
+    </div>
+  </section>
+</main>
+
+<script>
+  const pw = document.getElementById('password');
+  document.getElementById('toggle').addEventListener('click', e => {
+    const show = pw.type === 'password';
+    pw.type = show ? 'text' : 'password';
+    e.currentTarget.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+  });
+</script>
+</body>
+</html>

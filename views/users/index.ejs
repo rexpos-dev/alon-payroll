@@ -1,0 +1,44 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Users</h1></div>
+<form method="post" action="/users" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>New user</h2>
+  <div class="form-grid compact">
+    <label>Username<input name="username" required></label>
+    <label>Full name<input name="full_name" required></label>
+    <label>Role<select name="role"><% for (const r of ROLES) { %><option value="<%= r %>"><%= ROLE_LABELS[r] %></option><% } %></select></label>
+    <label>Password (8+)<input type="password" name="password" minlength="8" required autocomplete="new-password"></label>
+  </div>
+  <div class="form-actions"><button class="btn primary">Create</button></div>
+</form>
+<div class="card flush">
+<table class="grid">
+  <thead><tr><th>Username</th><th>Name</th><th colspan="2">Role / Active / Reset password</th></tr></thead>
+  <tbody>
+  <% for (const u of rows) { %>
+    <tr class="<%= u.active ? '' : 'off' %>">
+      <td><%= u.username %></td><td><%= u.full_name %></td>
+      <td colspan="2">
+        <form method="post" action="/users/<%= u.id %>" class="row-form">
+          <input type="hidden" name="_csrf" value="<%= csrf %>">
+          <select name="role"><% for (const r of ROLES) { %><option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= ROLE_LABELS[r] %></option><% } %></select>
+          <label class="inline-check"><input type="checkbox" name="active" value="1" <%= u.active ? 'checked' : '' %>> Active</label>
+          <input type="password" name="password" placeholder="New password (optional)" autocomplete="new-password">
+          <button class="linkbtn">Save</button>
+        </form>
+      </td>
+    </tr>
+  <% } %>
+  </tbody>
+</table>
+</div>
+<div class="card narrow">
+  <h2>Roles</h2>
+  <ul>
+    <li><strong>Admin</strong>: everything, including users, settings and rates.</li>
+    <li><strong>HR</strong>: employees, schedules, holidays, leaves, DTR and loans.</li>
+    <li><strong>Payroll Officer</strong>: DTR, loans, adjustments, computing and posting payroll.</li>
+    <li><strong>Approver</strong>: approves or rejects computed payroll and can view the audit log.</li>
+  </ul>
+</div>
+<%- include('../partials/footer') %>

@@ -1,0 +1,34 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Payroll Periods</h1></div>
+<% if (can('payroll')) { %>
+<form method="post" action="/periods" class="card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>New cut-off</h2>
+  <div class="form-grid compact">
+    <label>From<input type="date" name="date_from" value="<%= next.date_from %>" required></label>
+    <label>To<input type="date" name="date_to" value="<%= next.date_to %>" required></label>
+    <label>Pay date<input type="date" name="pay_date" value="<%= next.pay_date %>" required></label>
+    <label>Cut-off<select name="cutoff"><option value="1st" <%= next.cutoff === '1st' ? 'selected' : '' %>>1st (1–15)</option><option value="2nd" <%= next.cutoff === '2nd' ? 'selected' : '' %>>2nd (16–end of month)</option></select></label>
+  </div>
+  <div class="form-actions"><button class="btn primary">Create period</button></div>
+</form>
+<% } %>
+<div class="card flush">
+<table class="grid">
+  <thead><tr><th>Cut-off</th><th></th><th>Pay date</th><th>Status</th><th class="num">Payslips</th><th class="num">Total net pay</th></tr></thead>
+  <tbody>
+  <% for (const p of rows) { %>
+    <tr>
+      <td><a href="/periods/<%= p.id %>"><%= fmtDate(p.date_from) %> – <%= fmtDate(p.date_to) %></a></td>
+      <td><%= p.cutoff %></td>
+      <td><%= fmtDate(p.pay_date) %></td>
+      <td><span class="pill <%= p.status %>"><%= STATUS_LABEL[p.status] %></span></td>
+      <td class="num"><%= p.slips %></td>
+      <td class="num">₱<%= money(p.net) %></td>
+    </tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="6" class="muted center">No periods yet.</td></tr><% } %>
+  </tbody>
+</table>
+</div>
+<%- include('../partials/footer') %>

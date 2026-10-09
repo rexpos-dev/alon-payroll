@@ -1,0 +1,88 @@
+<%- include('../partials/header') %>
+<% const tot = k => slips.reduce((a, s) => a + Number(s[k]), 0); const editable = ['draft','computed'].includes(period.status); %>
+<div class="page-head">
+  <div>
+    <h1><%= fmtDate(period.date_from) %> – <%= fmtDate(period.date_to) %></h1>
+    <div class="muted"><%= period.cutoff %> cut-off · Pay date <%= fmtDate(period.pay_date) %> · <span class="pill <%= period.status %>"><%= STATUS_LABEL[period.status] %></span>
+      <% if (period.approver_name) { %> · Approved by <%= period.approver_name %><% } %>
+      <% if (period.poster_name) { %> · Posted by <%= period.poster_name %><% } %></div>
+  </div>
+  <a class="btn" href="/periods">All periods</a>
+</div>
+
+<div class="flow">
+  <% const steps = ['draft','computed','approved','posted']; const cur = steps.indexOf(period.status); %>
+  <% steps.forEach((s, i) => { %><div class="flow-step <%= i < cur ? 'done' : (i === cur ? 'now' : '') %>"><%= i + 1 %>. <%= STATUS_LABEL[s] %></div><% }) %>
+</div>
+
+<% if (period.notes && period.status === 'draft') { %><div class="flash warn">Rejected: <%= period.notes %></div><% } %>
+
+<div class="card actions-bar">
+  <% if (editable) { %>
+    <a class="btn" href="/periods/<%= period.id %>/adjustments">Adjustments (<%= adjCount %>)</a>
+    <a class="btn" href="/dtr?from=<%= period.date_from %>&to=<%= period.date_to %>">DTR</a>
+    <% if (can('payroll')) { %>
+      <form method="post" action="/periods/<%= period.id %>/compute"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn primary"><%= period.status === 'draft' ? 'Compute payroll' : 'Recompute' %></button></form>
+    <% } %>
+  <% } %>
+  <% if (period.status === 'computed' && can('approver')) { %>
+    <form method="post" action="/periods/<%= period.id %>/approve" data-confirm="Approve this payroll?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn primary">Approve</button></form>
+  <% } %>
+  <% if (['computed','approved'].includes(period.status) && can('approver')) { %>
+    <form method="post" action="/periods/<%= period.id %>/reject" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrf %>"><input name="reason" placeholder="Reason for rejecting"><button class="btn">Reject</button></form>
+  <% } %>
+  <% if (period.status === 'approved' && can('payroll','approver')) { %>
+    <form method="post" action="/periods/<%= period.id %>/post" data-confirm="Post and lock? Loan balances will be updated and this cannot be changed afterwards."><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="btn primary">Post and lock</button></form>
+  <% } %>
+  <% if (slips.length) { %>
+    <a class="btn" href="/periods/<%= period.id %>/register">Payroll register</a>
+    <a class="btn" href="/periods/<%= period.id %>/payslips" target="_blank">Print all payslips</a>
+  <% } %>
+  <% if (editable && can('payroll')) { %>
+    <form method="post" action="/periods/<%= period.id %>/delete" data-confirm="Delete this period and its payslips?" class="push-right"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="linkbtn danger">Delete period</button></form>
+  <% } %>
+</div>
+
+<% if (warnings.length) { %>
+<div class="card warn-card">
+  <h2>Warnings from the computation</h2>
+  <ul><% for (const w of warnings) { %><li><strong><%= w.name %></strong>: <%= w.warnings.join(' ') %></li><% } %></ul>
+</div>
+<% } %>
+
+<% if (slips.length) { %>
+<div class="tiles">
+  <div class="tile"><div class="tile-label">Employees</div><div class="tile-value"><%= slips.length %></div></div>
+  <div class="tile"><div class="tile-label">Gross pay</div><div class="tile-value">₱<%= money(tot('gross_pay')) %></div></div>
+  <div class="tile"><div class="tile-label">Withholding tax</div><div class="tile-value">₱<%= money(tot('withholding_tax')) %></div></div>
+  <div class="tile"><div class="tile-label">Total net pay</div><div class="tile-value">₱<%= money(tot('net_pay')) %></div></div>
+</div>
+<div class="card flush">
+<div class="scroll-x">
+<table class="grid">
+  <thead><tr><th>Employee</th><th>Department</th><th class="num">Gross</th><th class="num">Allowances</th><th class="num">SSS</th><th class="num">PhilHealth</th><th class="num">Pag-IBIG</th><th class="num">Tax</th><th class="num">Deductions</th><th class="num">Loans</th><th class="num">Net pay</th><th></th></tr></thead>
+  <tbody>
+  <% for (const s of slips) { %>
+    <tr class="<%= Number(s.net_pay) < 0 ? 'absent' : '' %>">
+      <td><%= s.last_name %>, <%= s.first_name %> <span class="muted small"><%= s.emp_no %></span></td>
+      <td><%= s.department || '' %></td>
+      <td class="num"><%= money(s.gross_pay) %></td>
+      <td class="num"><%= money(Number(s.taxable_allowances) + Number(s.nontaxable_allowances)) %></td>
+      <td class="num"><%= money(s.sss_ee) %></td>
+      <td class="num"><%= money(s.philhealth_ee) %></td>
+      <td class="num"><%= money(s.pagibig_ee) %></td>
+      <td class="num"><%= money(s.withholding_tax) %></td>
+      <td class="num"><%= money(s.other_deductions) %></td>
+      <td class="num"><%= money(s.loan_deductions) %></td>
+      <td class="num"><strong><%= money(s.net_pay) %></strong></td>
+      <td><a href="/payslips/<%= s.id %>" target="_blank">Payslip</a></td>
+    </tr>
+  <% } %>
+  </tbody>
+</table>
+</div>
+</div>
+<% } else { %>
+<div class="card"><p class="muted">No payslips yet. Check the DTR and adjustments, then click <strong>Compute payroll</strong>.</p></div>
+<% } %>
+<%- include('../partials/footer') %>

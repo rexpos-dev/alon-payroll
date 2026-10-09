@@ -1,0 +1,59 @@
+<%- include('../partials/header') %>
+<% const editable = ['draft','computed'].includes(period.status) && can('payroll'); %>
+<div class="page-head">
+  <div><h1>Adjustments</h1><div class="muted"><%= fmtDate(period.date_from) %> – <%= fmtDate(period.date_to) %></div></div>
+  <a class="btn" href="/periods/<%= period.id %>">Back to period</a>
+</div>
+<% if (editable) { %>
+<form method="post" action="/periods/<%= period.id %>/adjustments" class="card" id="adjform">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <h2>Add</h2>
+  <div class="form-grid compact">
+    <label>Employee<select name="employee_id" id="adj-emp" required><option value=""></option><% for (const e of employees) { %><option value="<%= e.id %>"><%= e.last_name %>, <%= e.first_name %></option><% } %></select></label>
+    <label>Item<select name="pay_item_id" id="adj-item">
+      <option value="">— Custom (choose the type on the right) —</option>
+      <optgroup label="Variable allowance (qty x rate)"><% for (const it of items.filter(i => i.kind === 'variable')) { %><option value="<%= it.id %>"><%= it.name %></option><% } %></optgroup>
+      <optgroup label="One-time deduction"><% for (const it of items.filter(i => i.kind === 'deduction')) { %><option value="<%= it.id %>"><%= it.name %></option><% } %></optgroup>
+    </select></label>
+    <label>Custom type<select name="kind">
+      <option value="earning_adj">Additional earning (adjustment)</option>
+      <option value="deduction_adj">Deduction (adjustment)</option>
+    </select></label>
+    <label>Label<input name="label" placeholder="Example: Salary adjustment"></label>
+    <label>Qty<input type="number" step="0.01" min="0.01" name="qty" value="1"></label>
+    <label>Amount / rate<input type="number" step="0.01" name="amount" id="adj-amount" required></label>
+    <label class="inline-check"><input type="checkbox" name="taxable" value="1"> Taxable (custom only)</label>
+  </div>
+  <div class="form-actions"><button class="btn primary">Add</button></div>
+</form>
+<script>
+  // Pre-fill the rate from the employee's variable allowance setup
+  const RATES = <%- JSON.stringify(rates) %>;
+  const fill = () => {
+    const e = Number(document.getElementById('adj-emp').value);
+    const i = Number(document.getElementById('adj-item').value);
+    const r = RATES.find(x => x.employee_id === e && x.pay_item_id === i);
+    if (r) document.getElementById('adj-amount').value = r.amount;
+  };
+  document.getElementById('adj-emp').addEventListener('change', fill);
+  document.getElementById('adj-item').addEventListener('change', fill);
+</script>
+<% } %>
+<div class="card flush">
+<table class="grid">
+  <thead><tr><th>Employee</th><th>Type</th><th>Label</th><th class="num">Qty</th><th class="num">Amount</th><th class="num">Total</th><th>Taxable</th><th></th></tr></thead>
+  <tbody>
+  <% const KIND = { variable: 'Variable allowance', deduction: 'Deduction', earning_adj: 'Additional earning', deduction_adj: 'Deduction' }; %>
+  <% for (const a of rows) { %>
+    <tr>
+      <td><%= a.last_name %>, <%= a.first_name %></td><td><%= KIND[a.kind] %></td><td><%= a.label %></td>
+      <td class="num"><%= a.qty %></td><td class="num"><%= money(a.amount) %></td><td class="num"><%= money(a.qty * a.amount) %></td>
+      <td><%= a.taxable ? 'Yes' : '' %></td>
+      <td class="right"><% if (editable) { %><form method="post" action="/periods/<%= period.id %>/adjustments/<%= a.id %>/delete" data-confirm="Delete?"><input type="hidden" name="_csrf" value="<%= csrf %>"><button class="linkbtn danger">Delete</button></form><% } %></td>
+    </tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="8" class="muted center">No adjustments for this period.</td></tr><% } %>
+  </tbody>
+</table>
+</div>
+<%- include('../partials/footer') %>

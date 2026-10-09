@@ -1,0 +1,36 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Allowances and Deductions</h1></div>
+<form method="post" action="/settings/pay-items" class="filters card">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input name="name" placeholder="Name (example: Load Allowance)" required>
+  <select name="kind"><option value="fixed">Fixed allowance</option><option value="variable">Variable allowance</option><option value="deduction">Deduction</option></select>
+  <label class="inline-check"><input type="checkbox" name="taxable" value="1"> Taxable</label>
+  <button class="btn primary">Add</button>
+</form>
+<% for (const [kind, label] of [['fixed','Fixed allowances'],['variable','Variable allowances'],['deduction','Deductions']]) { %>
+<div class="card flush">
+  <div class="card-head"><strong><%= label %></strong></div>
+  <table class="grid small">
+    <thead><tr><th>Code</th><th>Name</th><th>Taxable</th><th>Active</th><th>Order</th><th></th></tr></thead>
+    <tbody>
+    <% for (const r of rows.filter(x => x.kind === kind)) { %>
+      <tr class="<%= r.active ? '' : 'off' %>">
+        <td class="muted"><%= r.code %></td>
+        <td colspan="5">
+          <form method="post" action="/settings/pay-items/<%= r.id %>" class="row-form">
+            <input type="hidden" name="_csrf" value="<%= csrf %>">
+            <input name="name" value="<%= r.name %>">
+            <label class="inline-check"><input type="checkbox" name="taxable" value="1" <%= r.taxable ? 'checked' : '' %> <%= kind === 'deduction' ? 'disabled' : '' %>> Taxable</label>
+            <label class="inline-check"><input type="checkbox" name="active" value="1" <%= r.active ? 'checked' : '' %>> Active</label>
+            <input type="number" name="sort_order" value="<%= r.sort_order %>" class="mini">
+            <button class="linkbtn">Save</button>
+          </form>
+        </td>
+      </tr>
+    <% } %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+<p class="muted">Taxable allowances are included in taxable income. Non-taxable ones (for example de minimis) are only added to net pay.</p>
+<%- include('../partials/footer') %>

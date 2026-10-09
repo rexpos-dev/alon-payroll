@@ -1,0 +1,10 @@
+  </main>
+<% if (user) { %></div><% } %>
+<script>
+  // Ask for confirmation before submitting a risky action
+  document.querySelectorAll('form[data-confirm]').forEach(f => f.addEventListener('submit', e => {
+    if (!window.confirm(f.dataset.confirm)) e.preventDefault();
+  }));
+</script>
+</body>
+</html>

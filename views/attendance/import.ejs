@@ -1,0 +1,25 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Import DTR</h1><a class="btn" href="/dtr">Back to DTR</a></div>
+<div class="card narrow">
+  <p>Two formats are accepted (.xlsx or .csv):</p>
+  <ol>
+    <li><strong>One row per day</strong>: <code>emp_no, date, am_in, am_out, pm_in, pm_out</code>. <a href="/dtr/template.csv">Download the template</a>.</li>
+    <li><strong>Biometric punch log</strong>: <code>emp_no, datetime</code> (one row per punch). The 1st punch = AM In, the last = PM Out.</li>
+  </ol>
+  <p class="muted">The emp_no must match the Employee No in the system. Days inside an approved or posted period cannot be changed.</p>
+  <form method="post" action="/dtr/import" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="file" name="file" accept=".xlsx,.csv" required>
+    <button class="btn primary">Import</button>
+  </form>
+</div>
+<% if (result) { %>
+<div class="card narrow">
+  <h2>Resulta</h2>
+  <p><strong><%= result.saved %></strong> day(s) saved.<% if (result.locked) { %> <%= result.locked %> were not saved because the period is locked.<% } %></p>
+  <% if (result.unknown.length) { %><div class="flash warn">Unknown emp_no: <%= result.unknown.join(', ') %></div><% } %>
+  <% if (result.badCount) { %><div class="flash warn"><%= result.badCount %> row(s) with an invalid date/time, for example: <%= result.bad.join(' | ') %></div><% } %>
+  <p><a class="btn primary" href="/dtr">View DTR</a></p>
+</div>
+<% } %>
+<%- include('../partials/footer') %>

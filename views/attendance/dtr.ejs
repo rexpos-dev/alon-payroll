@@ -1,0 +1,66 @@
+<%- include('../partials/header') %>
+<div class="page-head">
+  <h1>Daily Time Record</h1>
+  <% if (can('hr','payroll')) { %><a class="btn" href="/dtr/import">Import from biometric</a><% } %>
+</div>
+<form class="filters" method="get">
+  <select name="employee_id" required>
+    <option value="">Select an employee</option>
+    <% for (const e of employees) { %><option value="<%= e.id %>" <%= e.id === employeeId ? 'selected' : '' %>><%= e.last_name %>, <%= e.first_name %> (<%= e.emp_no %>)</option><% } %>
+  </select>
+  <label class="inline">From <input type="date" name="from" value="<%= from %>"></label>
+  <label class="inline">To <input type="date" name="to" value="<%= to %>"></label>
+  <button class="btn">Ipakita</button>
+</form>
+
+<% if (emp) { %>
+<form method="post" action="/dtr" class="card flush">
+  <input type="hidden" name="_csrf" value="<%= csrf %>">
+  <input type="hidden" name="employee_id" value="<%= emp.id %>">
+  <input type="hidden" name="from" value="<%= from %>">
+  <input type="hidden" name="to" value="<%= to %>">
+  <div class="card-head">
+    <div><strong><%= emp.last_name %>, <%= emp.first_name %></strong> · Schedule <%= t5(sched.am_in) %>–<%= t5(sched.am_out) %>, <%= t5(sched.pm_in) %>–<%= t5(sched.pm_out) %> · Rest day: <%= sched.rest_days || 'none' %></div>
+    <% if (!Number(emp.track_dtr)) { %><span class="tag">DTR is not tracked for this employee</span><% } %>
+  </div>
+  <div class="scroll-x">
+  <table class="grid dtr">
+    <thead><tr>
+      <th>Date</th><th>AM In</th><th>AM Out</th><th>PM In</th><th>PM Out</th><th>Leave</th>
+      <th>Day type</th><th class="num">Worked</th><th class="num">Absent</th><th class="num">Late</th><th class="num">UT</th><th class="num">OT hrs</th><th>OT ok</th><th class="num">ND</th><th>Remarks</th>
+    </tr></thead>
+    <tbody>
+    <% for (const r of rows) { const a = r.a; const s = r.s; %>
+      <tr class="<%= s.day_type !== 'regular' ? 'off' : '' %> <%= Number(s.absent_days) > 0 ? 'absent' : '' %>">
+        <td class="nowrap"><input type="hidden" name="date" value="<%= r.date %>"><%= r.day %> <%= r.date.slice(5) %></td>
+        <td><input type="time" name="am_in_<%= r.date %>" value="<%= t5(a.am_in) %>"></td>
+        <td><input type="time" name="am_out_<%= r.date %>" value="<%= t5(a.am_out) %>"></td>
+        <td><input type="time" name="pm_in_<%= r.date %>" value="<%= t5(a.pm_in) %>"></td>
+        <td><input type="time" name="pm_out_<%= r.date %>" value="<%= t5(a.pm_out) %>"></td>
+        <td><select name="leave_<%= r.date %>"><option value=""></option><option <%= a.leave_type === 'VL' ? 'selected' : '' %>>VL</option><option <%= a.leave_type === 'SL' ? 'selected' : '' %>>SL</option></select></td>
+        <td class="nowrap"><%= { regular: 'Regular', rest: 'Rest day', special: 'Special hol.', regular_holiday: 'Regular hol.' }[s.day_type] %><% if (r.holiday) { %><div class="muted small"><%= r.holiday.name %></div><% } %></td>
+        <td class="num"><%= Number(s.days_worked) || '' %></td>
+        <td class="num"><%= Number(s.absent_days) || '' %></td>
+        <td class="num"><%= Number(s.late_min) || '' %></td>
+        <td class="num"><%= Number(s.undertime_min) || '' %></td>
+        <td class="num"><%= Number(s.ot_hours) || '' %></td>
+        <td class="center"><input type="checkbox" name="ot_<%= r.date %>" value="1" <%= Number(a.ot_approved) ? 'checked' : '' %>></td>
+        <td class="num"><%= Number(s.nd_hours) || '' %></td>
+        <td><input name="remarks_<%= r.date %>" value="<%= a.remarks || '' %>" class="remarks"></td>
+      </tr>
+    <% } %>
+    </tbody>
+    <tfoot><tr>
+      <td colspan="7">Total</td>
+      <td class="num"><%= totals.worked %></td><td class="num"><%= totals.absent %></td><td class="num"><%= totals.late %></td>
+      <td class="num"><%= totals.ut %></td><td class="num"><%= Math.round(totals.ot * 100) / 100 %></td><td></td><td class="num"><%= Math.round(totals.nd * 100) / 100 %></td><td></td>
+    </tr></tfoot>
+  </table>
+  </div>
+  <div class="card-foot">
+    <span class="muted">Late/UT in minutes. OT is paid only when "OT ok" is checked. A blank workday is counted as absent.</span>
+    <% if (can('hr','payroll')) { %><button class="btn primary">Save DTR</button><% } %>
+  </div>
+</form>
+<% } %>
+<%- include('../partials/footer') %>

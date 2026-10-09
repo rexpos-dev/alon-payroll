@@ -1,0 +1,31 @@
+<%- include('../partials/header') %>
+<div class="page-head"><h1>Import from the old Excel file</h1><a class="btn" href="/employees">Back</a></div>
+<div class="card narrow">
+  <p>Upload the old <strong>PAYROLL-V3 (.xlsm or .xlsx)</strong> file. These sheets will be read:</p>
+  <ul>
+    <li><strong>201FILE</strong>: employees (matched by Emp ID; existing ones are updated)</li>
+    <li><strong>Fixed Allowance</strong>, <strong>Variable Allowance</strong>, <strong>Deductions</strong>: amount per employee</li>
+    <li><strong>Schedule</strong>: time in/out</li>
+    <li><strong>SSS Loan</strong>, <strong>Pagibig Loan</strong>: loans with an amortization</li>
+  </ul>
+  <form method="post" action="/employees/import" enctype="multipart/form-data" class="stack">
+    <input type="hidden" name="_csrf" value="<%= csrf %>">
+    <input type="file" name="file" accept=".xlsx,.xlsm" required>
+    <button class="btn primary">Import</button>
+  </form>
+</div>
+<% if (result) { %>
+<div class="card narrow">
+  <h2>Resulta</h2>
+  <table class="grid small">
+    <tr><td>New employees</td><td class="num"><%= result.counts.employees_new %></td></tr>
+    <tr><td>Updated employees</td><td class="num"><%= result.counts.employees_updated %></td></tr>
+    <tr><td>Allowance/deduction amounts</td><td class="num"><%= result.counts.pay_items %></td></tr>
+    <tr><td>Schedules</td><td class="num"><%= result.counts.schedules %></td></tr>
+    <tr><td>Loans</td><td class="num"><%= result.counts.loans %></td></tr>
+  </table>
+  <% for (const n of result.notes) { %><div class="flash warn"><%= n %></div><% } %>
+  <p><a class="btn primary" href="/employees">View employees</a></p>
+</div>
+<% } %>
+<%- include('../partials/footer') %>
